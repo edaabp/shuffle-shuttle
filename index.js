@@ -14,6 +14,9 @@ const spotifyApi = new SpotifyWebApi({
   redirectUri: process.env.SPOTIFY_REDIRECT_URI,
 });
 
+console.log("Client ID:", process.env.SPOTIFY_CLIENT_ID);
+console.log("Redirect URI:", process.env.SPOTIFY_REDIRECT_URI);
+
 
 // LANDING PAGE
 app.get("/", (req, res) => {
