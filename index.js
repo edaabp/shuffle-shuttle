@@ -231,6 +231,7 @@ const playlistUrl = req.query.playlist;
 
 const playlistId = playlistUrl.split("/playlist/")[1].split("?")[0];
 
+// Get Tracks
 let tracks=[];
 let url=`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
 
@@ -245,31 +246,71 @@ tracks=tracks.concat(response.data.items);
 url=response.data.next;
 }
 
-let uris=tracks.map(t=>t.track.uri);
+// Extract URIs
+let uris=tracks
+.filter(t=>t.track && t.track.uri)
+.map(t=>t.track.uri);
 
+// Shuffle
 uris.sort(()=>Math.random()-0.5);
 
+// Clear playlist
 await axios.put(
 `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
 {
-uris:uris
+uris:[]
 },
 {
 headers:{
-Authorization:`Bearer ${accessToken}`
+Authorization:`Bearer ${accessToken}`,
+"Content-Type":"application/json"
 }
 }
 );
 
+// Add shuffled tracks
+for(let i=0;i<uris.length;i+=100){
+
+await axios.post(
+`https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+{
+uris:uris.slice(i,i+100)
+},
+{
+headers:{
+Authorization:`Bearer ${accessToken}`,
+"Content-Type":"application/json"
+}
+}
+);
+
+}
+
 res.send(`
-<h2>🎶 Playlist Shuffled</h2>
-<a href="${playlistUrl}" target="_blank">Open Playlist</a>
+<!DOCTYPE html>
+<html>
+<body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:50px">
+
+<h2>:notes: Playlist Shuffled</h2>
+
+<a href="${playlistUrl}" target="_blank">
+<button style="padding:12px 24px;border-radius:30px;background:#1DB954;color:white;border:none;">
+Open Playlist
+</button>
+</a>
+
 <br><br>
-<a href="/">Shuffle Another</a>
+
+<a href="/">
+Shuffle Another
+</a>
+
+</body>
+</html>
 `);
 
 }catch(err){
-console.log(err.response?.data || err.message);
+console.log("ERROR:", err.response?.data || err.message);
 res.send("Error shuffling");
 }
 
