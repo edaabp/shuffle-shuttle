@@ -18,11 +18,15 @@ const spotifyApi = new SpotifyWebApi({
 // LANDING PAGE
 app.get("/", (req, res) => {
   res.send(`
+  <!DOCTYPE html>
   <html>
+
   <head>
   <title>Shuffle Shuttle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
+
   body{
   background:#121212;
   color:white;
@@ -32,20 +36,33 @@ app.get("/", (req, res) => {
   align-items:center;
   height:100vh;
   margin:0;
+  padding:20px;
   }
 
   .container{
   text-align:center;
+  width:100%;
+  max-width:420px;
+  }
+
+  h1{
+  font-size:28px;
+  }
+
+  p{
+  color:#aaa;
   }
 
   button{
-  padding:15px 30px;
+  width:100%;
+  padding:16px;
   border-radius:30px;
   border:none;
   background:#1DB954;
   color:white;
   font-weight:bold;
   cursor:pointer;
+  font-size:16px;
   }
 
   button:hover{
@@ -108,32 +125,79 @@ app.get("/callback", async (req, res) => {
     accessToken = data.body.access_token;
     spotifyApi.setAccessToken(accessToken);
 
-    console.log("Scopes granted:", data.body.scope);
-
     res.send(`
+      <!DOCTYPE html>
       <html>
-      <body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:100px;">
 
-      <h2>Shuffle Shuttle 🎧</h2>
+      <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+      <style>
+
+      body{
+      background:#121212;
+      color:white;
+      font-family:Arial;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      margin:0;
+      padding:20px;
+      }
+
+      .container{
+      width:100%;
+      max-width:420px;
+      text-align:center;
+      }
+
+      input{
+      width:100%;
+      padding:14px;
+      border-radius:12px;
+      border:none;
+      font-size:16px;
+      }
+
+      button{
+      width:100%;
+      padding:16px;
+      border:none;
+      border-radius:30px;
+      background:#1DB954;
+      color:white;
+      font-weight:bold;
+      font-size:16px;
+      margin-top:15px;
+      }
+
+      </style>
+
+      </head>
+
+      <body>
+
+      <div class="container">
+
+      <h2>Shuffle Playlist 🎧</h2>
 
       <form action="/shuffle" method="get">
 
       <input 
       name="playlist" 
       placeholder="Paste Spotify Playlist URL"
-      style="width:420px;padding:10px;border-radius:8px;border:none"
       required
       />
 
-      <br/><br/>
-
-      <button style="padding:12px 25px;border:none;border-radius:25px;background:#1DB954;color:white;font-weight:bold">
-      Shuffle Playlist
-      </button>
+      <button>Shuffle Playlist</button>
 
       </form>
 
+      </div>
+
       </body>
+
       </html>
     `);
 
@@ -160,8 +224,6 @@ app.get("/shuffle", async (req, res) => {
       return res.send("Invalid playlist URL");
     }
 
-    console.log("Step 1: Get tracks");
-
     let tracks = [];
     let url = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50`;
 
@@ -176,19 +238,13 @@ app.get("/shuffle", async (req, res) => {
       url = response.data.next;
     }
 
-    console.log("Tracks found:", tracks.length);
-
     let uris = tracks
       .filter(t => t?.item?.uri)
       .map(t => t.item.uri);
 
     uris = [...new Set(uris)];
 
-    console.log("Valid tracks:", uris.length);
-
     uris.sort(() => Math.random() - 0.5);
-
-    console.log("Replace playlist");
 
     await axios.put(
       `https://api.spotify.com/v1/playlists/${playlistId}/items`,
@@ -219,22 +275,72 @@ app.get("/shuffle", async (req, res) => {
     }
 
     res.send(`
+      <!DOCTYPE html>
       <html>
-      <body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:100px;">
-      
+
+      <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+      <style>
+
+      body{
+      background:#121212;
+      color:white;
+      font-family:Arial;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      margin:0;
+      padding:20px;
+      }
+
+      .container{
+      text-align:center;
+      width:100%;
+      max-width:420px;
+      }
+
+      button{
+      width:100%;
+      padding:16px;
+      border:none;
+      border-radius:30px;
+      background:#1DB954;
+      color:white;
+      font-weight:bold;
+      font-size:16px;
+      margin-top:10px;
+      }
+
+      a{
+      text-decoration:none;
+      }
+
+      </style>
+
+      </head>
+
+      <body>
+
+      <div class="container">
+
       <h2>🎶 Playlist Shuffled</h2>
 
       <a href="https://open.spotify.com/playlist/${playlistId}" target="_blank">
-      <button style="padding:12px 25px;border:none;border-radius:25px;background:#1DB954;color:white;font-weight:bold">
-      Open Playlist
+      <button>Open Playlist</button>
+      </a>
+
+      <a href="/">
+      <button style="background:#333;margin-top:10px;">
+      Shuffle Another
       </button>
       </a>
 
-      <br/><br/>
-
-      <a href="/" style="color:#aaa">Shuffle Another</a>
+      </div>
 
       </body>
+
       </html>
     `);
 
