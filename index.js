@@ -12,9 +12,6 @@ const spotifyApi = new SpotifyWebApi({
   redirectUri: process.env.SPOTIFY_REDIRECT_URI,
 });
 
-console.log("Client ID:", process.env.SPOTIFY_CLIENT_ID);
-console.log("Redirect URI:", process.env.SPOTIFY_REDIRECT_URI);
-
 
 // LANDING PAGE
 app.get("/", (req, res) => {
@@ -23,9 +20,9 @@ app.get("/", (req, res) => {
 <html>
 <head>
 <title>Shuffle Shuttle</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
+
 body{
 margin:0;
 font-family:Arial;
@@ -39,35 +36,22 @@ height:100vh;
 
 .container{
 text-align:center;
-width:90%;
-max-width:450px;
 }
 
-.logo{
-font-size:36px;
-font-weight:bold;
-margin-bottom:10px;
-}
-
-.subtitle{
-color:#aaa;
-margin-bottom:25px;
-}
-
-.button{
-padding:14px 30px;
-border:none;
-border-radius:50px;
+button{
+padding:15px 30px;
 background:#1DB954;
+border:none;
+border-radius:30px;
 color:white;
 font-weight:bold;
-font-size:16px;
 cursor:pointer;
 }
 
-.button:hover{
+button:hover{
 background:#1ed760;
 }
+
 </style>
 
 </head>
@@ -76,24 +60,22 @@ background:#1ed760;
 
 <div class="container">
 
-<div class="logo">🎧 Shuffle Shuttle</div>
+<h1>🎧 Shuffle Shuttle</h1>
 
-<div class="subtitle">
-Shuffle your Spotify playlists instantly
-</div>
+<p>Shuffle your Spotify playlist instantly</p>
 
 <a href="/login">
-<button class="button">
-Connect Spotify Account
-</button>
+<button>Connect Spotify Account</button>
 </a>
 
 </div>
 
 </body>
+
 </html>
 `);
 });
+
 
 
 // LOGIN
@@ -112,14 +94,16 @@ app.get("/login", (req, res) => {
   ];
 
   res.redirect(
-    spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
+    spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle")
   );
 
 });
 
 
+
 // CALLBACK
 app.get("/callback", async (req, res) => {
+
   try {
 
     const code = req.query.code;
@@ -132,10 +116,14 @@ app.get("/callback", async (req, res) => {
     res.redirect(`/app?token=${accessToken}&refresh=${refreshToken}`);
 
   } catch (err) {
+
     console.log(err);
     res.send("Login error");
+
   }
+
 });
+
 
 
 // APP UI
@@ -148,9 +136,8 @@ app.get("/app", (req, res) => {
 
 <!DOCTYPE html>
 <html>
-<head>
 
-<title>Shuffle Shuttle</title>
+<head>
 
 <style>
 
@@ -162,31 +149,31 @@ display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
-margin:0;
 }
 
 .container{
 width:400px;
+text-align:center;
 }
 
 textarea{
 width:100%;
 height:100px;
-margin-bottom:10px;
+margin-bottom:20px;
 padding:10px;
 border-radius:10px;
 border:none;
 }
 
 button{
-width:100%;
-padding:12px;
+padding:15px;
 background:#1DB954;
 border:none;
 border-radius:30px;
 color:white;
 font-weight:bold;
 cursor:pointer;
+width:100%;
 }
 
 button:hover{
@@ -217,11 +204,14 @@ background:#1ed760;
 </div>
 
 </body>
+
 </html>
 
 `);
 
 });
+
+
 
 
 // SHUFFLE
@@ -233,16 +223,19 @@ app.get("/shuffle", async (req, res) => {
     const refreshToken = req.query.refresh;
     const playlistUrl = req.query.playlist;
 
-    // Refresh token
+
+    // REFRESH TOKEN
     spotifyApi.setRefreshToken(refreshToken);
+
     const refresh = await spotifyApi.refreshAccessToken();
+
     accessToken = refresh.body.access_token;
+
 
     const playlistId = playlistUrl.split("/playlist/")[1].split("?")[0];
 
-    console.log("Playlist ID:", playlistId);
 
-    // Get tracks
+    // GET TRACKS
     let tracks = [];
     let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
 
@@ -256,33 +249,36 @@ app.get("/shuffle", async (req, res) => {
 
       tracks = tracks.concat(response.data.items);
       url = response.data.next;
+
     }
 
-    console.log("Tracks found:", tracks.length);
 
-    // Extract URIs
+    // EXTRACT URIS
     let uris = tracks
       .filter(t => t.track && t.track.uri)
       .map(t => t.track.uri);
 
-    // Shuffle
+
+    // SHUFFLE
     uris.sort(() => Math.random() - 0.5);
 
-    // Clear playlist
-    await axios.put(
+
+    // REMOVE ALL TRACKS
+    await axios.delete(
       `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-      {
-        uris: []
-      },
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json"
+        },
+        data: {
+          tracks: uris.map(uri => ({ uri }))
         }
       }
     );
 
-    // Add shuffled tracks
+
+    // ADD BACK SHUFFLED TRACKS
     for (let i = 0; i < uris.length; i += 100) {
 
       await axios.post(
@@ -300,20 +296,50 @@ app.get("/shuffle", async (req, res) => {
 
     }
 
-    // Success
+
+    // SUCCESS PAGE
     res.send(`
+
+<!DOCTYPE html>
+<html>
+
+<body style="
+background:#121212;
+color:white;
+font-family:Arial;
+text-align:center;
+padding-top:80px;
+">
+
 <h2>🎶 Playlist Shuffled</h2>
-<a href="${playlistUrl}" target="_blank">Open Playlist</a>
+
+<a href="${playlistUrl}" target="_blank">
+<button style="
+padding:15px 30px;
+border-radius:30px;
+border:none;
+background:#1DB954;
+color:white;
+font-weight:bold;
+cursor:pointer;
+">
+Open Playlist
+</button>
+</a>
+
 <br><br>
-<a href="/">Shuffle Another</a>
+
+<a href="/" style="color:#aaa;">Shuffle Another</a>
+
+</body>
+
+</html>
+
 `);
 
   } catch (err) {
 
-    console.log("FULL ERROR:");
-    console.log(err.response?.data);
-    console.log(err.response?.status);
-    console.log(err.message);
+    console.log("ERROR:", err.response?.data || err.message);
 
     res.send(`
 <h2>Error shuffling</h2>
