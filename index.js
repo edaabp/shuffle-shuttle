@@ -391,6 +391,8 @@ Shuffle Another
   }
 });
 
-app.listen(3000, () => {
-  console.log("Running on https://shuffle-shuttle.onrender.com/login");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Running on port", PORT);
 });
