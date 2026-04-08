@@ -6,8 +6,6 @@ const axios = require("axios");
 
 const app = express();
 
-let accessToken = "";
-
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
@@ -143,12 +141,12 @@ app.get("/callback", async (req, res) => {
     const code = req.query.code;
     const data = await spotifyApi.authorizationCodeGrant(code);
 
-    accessToken = data.body.access_token;
-    spotifyApi.setAccessToken(accessToken);
+    const accessToken = data.body.access_token;
 
-    res.redirect("/app");
+    res.redirect(`/app?token=${accessToken}`);
 
   } catch (err) {
+    console.log(err);
     res.send("Login error");
   }
 });
@@ -156,6 +154,8 @@ app.get("/callback", async (req, res) => {
 
 // APP UI
 app.get("/app", (req, res) => {
+
+const token = req.query.token;
 
 res.send(`
 <!DOCTYPE html>
@@ -206,6 +206,8 @@ font-weight:bold;
 
 <form action="/shuffle">
 
+<input type="hidden" name="token" value="${token}">
+
 <textarea name="playlist"></textarea>
 
 <button>Shuffle</button>
@@ -224,6 +226,7 @@ font-weight:bold;
 app.get("/shuffle", async (req, res) => {
 try{
 
+const accessToken = req.query.token;
 const playlistUrl = req.query.playlist;
 
 const playlistId = playlistUrl.split("/playlist/")[1].split("?")[0];
@@ -258,10 +261,15 @@ Authorization:`Bearer ${accessToken}`
 }
 );
 
-res.send("Playlist shuffled 🎧");
+res.send(`
+<h2>🎶 Playlist Shuffled</h2>
+<a href="${playlistUrl}" target="_blank">Open Playlist</a>
+<br><br>
+<a href="/">Shuffle Another</a>
+`);
 
 }catch(err){
-console.log(err);
+console.log(err.response?.data || err.message);
 res.send("Error shuffling");
 }
 
