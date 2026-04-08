@@ -16,7 +16,7 @@ console.log("Client ID:", process.env.SPOTIFY_CLIENT_ID);
 console.log("Redirect URI:", process.env.SPOTIFY_REDIRECT_URI);
 
 
-// Landing Page
+// LANDING PAGE
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -26,7 +26,6 @@ app.get("/", (req, res) => {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
@@ -69,7 +68,6 @@ cursor:pointer;
 .button:hover{
 background:#1ed760;
 }
-
 </style>
 
 </head>
@@ -96,7 +94,6 @@ Connect Spotify Account
 </html>
 `);
 });
-
 
 
 // LOGIN
@@ -139,7 +136,6 @@ app.get("/callback", async (req, res) => {
     res.send("Login error");
   }
 });
-
 
 
 // APP UI
@@ -228,8 +224,6 @@ background:#1ed760;
 });
 
 
-
-
 // SHUFFLE
 app.get("/shuffle", async (req, res) => {
 
@@ -239,14 +233,14 @@ app.get("/shuffle", async (req, res) => {
     const refreshToken = req.query.refresh;
     const playlistUrl = req.query.playlist;
 
-    // refresh token
+    // Refresh token
     spotifyApi.setRefreshToken(refreshToken);
-
     const refresh = await spotifyApi.refreshAccessToken();
-
     accessToken = refresh.body.access_token;
 
     const playlistId = playlistUrl.split("/playlist/")[1].split("?")[0];
+
+    console.log("Playlist ID:", playlistId);
 
     // Get tracks
     let tracks = [];
@@ -261,10 +255,10 @@ app.get("/shuffle", async (req, res) => {
       });
 
       tracks = tracks.concat(response.data.items);
-
       url = response.data.next;
-
     }
+
+    console.log("Tracks found:", tracks.length);
 
     // Extract URIs
     let uris = tracks
@@ -306,58 +300,29 @@ app.get("/shuffle", async (req, res) => {
 
     }
 
-    // Success Page
+    // Success
     res.send(`
-
-<!DOCTYPE html>
-<html>
-
-<body style="
-background:#121212;
-color:white;
-font-family:Arial;
-text-align:center;
-padding-top:80px;
-">
-
 <h2>🎶 Playlist Shuffled</h2>
-
-<a href="${playlistUrl}" target="_blank">
-<button style="
-padding:14px 30px;
-border-radius:30px;
-border:none;
-background:#1DB954;
-color:white;
-font-weight:bold;
-cursor:pointer;
-">
-Open Playlist
-</button>
-</a>
-
+<a href="${playlistUrl}" target="_blank">Open Playlist</a>
 <br><br>
-
-<a href="/" style="color:#aaa;">
-Shuffle Another
-</a>
-
-</body>
-
-</html>
-
+<a href="/">Shuffle Another</a>
 `);
 
   } catch (err) {
 
-    console.log("ERROR:", err.response?.data || err.message);
+    console.log("FULL ERROR:");
+    console.log(err.response?.data);
+    console.log(err.response?.status);
+    console.log(err.message);
 
-    res.send("Error shuffling");
+    res.send(`
+<h2>Error shuffling</h2>
+<pre>${JSON.stringify(err.response?.data || err.message, null, 2)}</pre>
+`);
 
   }
 
 });
-
 
 
 const PORT = process.env.PORT || 3000;
