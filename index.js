@@ -6,16 +6,16 @@ const SpotifyWebApi = require("spotify-web-api-node");
 const app = express();
 
 const spotifyApi = new SpotifyWebApi({
-clientId: process.env.SPOTIFY_CLIENT_ID,
-clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-redirectUri: process.env.SPOTIFY_REDIRECT_URI
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  redirectUri: process.env.SPOTIFY_REDIRECT_URI
 });
 
 
 
 // LANDING PAGE
 app.get("/", (req, res) => {
-res.send(`
+  res.send(`
 
 <!DOCTYPE html>
 <html>
@@ -76,21 +76,21 @@ cursor:pointer;
 // LOGIN
 app.get("/login", (req, res) => {
 
-const scopes = [
-"user-read-private",
-"user-read-email",
-"playlist-read-private",
-"playlist-read-collaborative",
-"user-read-playback-state",
-"user-read-currently-playing",
-"user-modify-playback-state",
-"playlist-modify-private",
-"playlist-modify-public"
-];
+  const scopes = [
+    "user-read-private",
+    "user-read-email",
+    "playlist-read-private",
+    "playlist-read-collaborative",
+    "user-read-playback-state",
+    "user-read-currently-playing",
+    "user-modify-playback-state",
+    "playlist-modify-private",
+    "playlist-modify-public"
+  ];
 
-res.redirect(
-spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
-);
+  res.redirect(
+    spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
+  );
 
 });
 
@@ -100,23 +100,23 @@ spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
 // CALLBACK
 app.get("/callback", async (req, res) => {
 
-try{
+  try {
 
-const code = req.query.code;
+    const code = req.query.code;
 
-const data = await spotifyApi.authorizationCodeGrant(code);
+    const data = await spotifyApi.authorizationCodeGrant(code);
 
-spotifyApi.setAccessToken(data.body.access_token);
-spotifyApi.setRefreshToken(data.body.refresh_token);
+    spotifyApi.setAccessToken(data.body.access_token);
+    spotifyApi.setRefreshToken(data.body.refresh_token);
 
-res.redirect("/app");
+    res.redirect("/app");
 
-}catch(err){
+  } catch (err) {
 
-console.log(err);
-res.send("Login error");
+    console.log(err);
+    res.send("Login error");
 
-}
+  }
 
 });
 
@@ -126,7 +126,7 @@ res.send("Login error");
 // APP UI
 app.get("/app", (req, res) => {
 
-res.send(`
+  res.send(`
 
 <h2>Shuffle Playlist</h2>
 
@@ -150,67 +150,87 @@ res.send(`
 // SHUFFLE
 app.get("/shuffle", async (req, res) => {
 
-try{
+  try {
 
-// refresh token
-const refresh = await spotifyApi.refreshAccessToken();
+    // refresh token
+    const refresh = await spotifyApi.refreshAccessToken();
+    spotifyApi.setAccessToken(refresh.body.access_token);
 
-spotifyApi.setAccessToken(refresh.body.access_token);
-
-const playlistUrl = req.query.playlist;
-
-const playlistId = playlistUrl.split("/playlist/")[1].split("?")[0];
+    const playlistUrl = req.query.playlist;
+    const playlistId = playlistUrl.split("/playlist/")[1].split("?")[0];
 
 
-// GET TRACKS
-let tracks=[];
-let offset=0;
+    // GET PLAYLIST
+    const playlist = await spotifyApi.getPlaylist(playlistId);
 
-while(true){
-
-const data = await spotifyApi.getPlaylistTracks(playlistId,{
-offset:offset,
-limit:100
-});
-
-tracks = tracks.concat(data.body.items);
-
-if(data.body.items.length<100) break;
-
-offset+=100;
-
-}
+    const playlistName = playlist.body.name;
+    const playlistDescription = playlist.body.description;
 
 
-// EXTRACT URIS
-let uris = tracks
-.filter(t=>t.track && t.track.uri)
-.map(t=>t.track.uri);
+    // GET TRACKS
+    let tracks = [];
+    let offset = 0;
+
+    while (true) {
+
+      const data = await spotifyApi.getPlaylistTracks(playlistId, {
+        offset: offset,
+        limit: 100
+      });
+
+      tracks = tracks.concat(data.body.items);
+
+      if (data.body.items.length < 100) break;
+
+      offset += 100;
+
+    }
 
 
-// SHUFFLE
-uris.sort(()=>Math.random()-0.5);
+    // EXTRACT URIS
+    let uris = tracks
+      .filter(t => t.track && t.track.uri)
+      .map(t => t.track.uri);
 
 
-// REPLACE PLAYLIST
-await spotifyApi.replaceTracksInPlaylist(playlistId, uris.slice(0,100));
-
-for(let i=100;i<uris.length;i+=100){
-
-await spotifyApi.addTracksToPlaylist(
-playlistId,
-uris.slice(i,i+100)
-);
-
-}
+    // SHUFFLE
+    uris.sort(() => Math.random() - 0.5);
 
 
-// SUCCESS
-res.send(`
+    // GET USER
+    const me = await spotifyApi.getMe();
+
+
+    // CREATE NEW PLAYLIST
+    const newPlaylist = await spotifyApi.createPlaylist(
+      me.body.id,
+      playlistName,
+      {
+        description: playlistDescription,
+        public: true
+      }
+    );
+
+    const newPlaylistId = newPlaylist.body.id;
+
+
+    // ADD TRACKS
+    for (let i = 0; i < uris.length; i += 100) {
+
+      await spotifyApi.addTracksToPlaylist(
+        newPlaylistId,
+        uris.slice(i, i + 100)
+      );
+
+    }
+
+
+    // SUCCESS
+    res.send(`
 
 <h2>🎶 Playlist Shuffled</h2>
 
-<a href="${playlistUrl}" target="_blank">
+<a href="https://open.spotify.com/playlist/${newPlaylistId}" target="_blank">
 Open Playlist
 </a>
 
@@ -220,21 +240,19 @@ Open Playlist
 
 `);
 
-}catch(err){
+  } catch (err) {
 
-console.log(err);
+    console.log(err);
+    res.send("Error shuffling");
 
-res.send("Error shuffling");
-
-}
+  }
 
 });
 
 
 
-
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT,()=>{
-console.log("Running on port",PORT);
+app.listen(PORT, () => {
+  console.log("Running on port", PORT);
 });
