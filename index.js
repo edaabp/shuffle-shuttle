@@ -13,6 +13,10 @@ const spotifyApi = new SpotifyWebApi({
 });
 
 
+app.get("/", (req, res) => {
+  res.redirect("/login");
+});
+
 // LOGIN
 app.get("/login", (req, res) => {
 
