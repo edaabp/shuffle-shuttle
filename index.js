@@ -15,6 +15,67 @@ const spotifyApi = new SpotifyWebApi({
 });
 
 
+// LANDING PAGE
+app.get("/", (req, res) => {
+  res.send(`
+  <html>
+  <head>
+  <title>Shuffle Shuttle</title>
+
+  <style>
+  body{
+  background:#121212;
+  color:white;
+  font-family:Arial;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  margin:0;
+  }
+
+  .container{
+  text-align:center;
+  }
+
+  button{
+  padding:15px 30px;
+  border-radius:30px;
+  border:none;
+  background:#1DB954;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  }
+
+  button:hover{
+  background:#1ed760;
+  }
+
+  </style>
+
+  </head>
+
+  <body>
+
+  <div class="container">
+
+  <h1>🎧 Shuffle Shuttle</h1>
+
+  <p>Shuffle your Spotify playlist instantly</p>
+
+  <a href="/login">
+  <button>Connect Spotify Account</button>
+  </a>
+
+  </div>
+
+  </body>
+  </html>
+  `);
+});
+
+
 // LOGIN
 app.get("/login", (req, res) => {
 
@@ -50,17 +111,30 @@ app.get("/callback", async (req, res) => {
     console.log("Scopes granted:", data.body.scope);
 
     res.send(`
+      <html>
+      <body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:100px;">
+
       <h2>Shuffle Shuttle 🎧</h2>
+
       <form action="/shuffle" method="get">
-        <input 
-          name="playlist" 
-          placeholder="Paste Spotify Playlist URL"
-          style="width:420px;padding:10px"
-          required
-        />
-        <br/><br/>
-        <button>Shuffle Existing Playlist</button>
+
+      <input 
+      name="playlist" 
+      placeholder="Paste Spotify Playlist URL"
+      style="width:420px;padding:10px;border-radius:8px;border:none"
+      required
+      />
+
+      <br/><br/>
+
+      <button style="padding:12px 25px;border:none;border-radius:25px;background:#1DB954;color:white;font-weight:bold">
+      Shuffle Playlist
+      </button>
+
       </form>
+
+      </body>
+      </html>
     `);
 
   } catch (err) {
@@ -104,8 +178,6 @@ app.get("/shuffle", async (req, res) => {
 
     console.log("Tracks found:", tracks.length);
 
-    console.log("Step 2: Filter tracks");
-
     let uris = tracks
       .filter(t => t?.item?.uri)
       .map(t => t.item.uri);
@@ -114,13 +186,10 @@ app.get("/shuffle", async (req, res) => {
 
     console.log("Valid tracks:", uris.length);
 
-    console.log("Step 3: Shuffle");
-
     uris.sort(() => Math.random() - 0.5);
 
-    console.log("Step 4: Replace playlist (safe)");
+    console.log("Replace playlist");
 
-    // Replace first 100 tracks
     await axios.put(
       `https://api.spotify.com/v1/playlists/${playlistId}/items`,
       {
@@ -133,8 +202,6 @@ app.get("/shuffle", async (req, res) => {
         }
       }
     );
-
-    console.log("Step 5: Add remaining tracks");
 
     for (let i = 100; i < uris.length; i += 100) {
       await axios.post(
@@ -151,13 +218,24 @@ app.get("/shuffle", async (req, res) => {
       );
     }
 
-    console.log("Shuffle complete");
-
     res.send(`
-      <h2>Playlist Shuffled 🎶</h2>
+      <html>
+      <body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:100px;">
+      
+      <h2>🎶 Playlist Shuffled</h2>
+
       <a href="https://open.spotify.com/playlist/${playlistId}" target="_blank">
-        Open Playlist
+      <button style="padding:12px 25px;border:none;border-radius:25px;background:#1DB954;color:white;font-weight:bold">
+      Open Playlist
+      </button>
       </a>
+
+      <br/><br/>
+
+      <a href="/" style="color:#aaa">Shuffle Another</a>
+
+      </body>
+      </html>
     `);
 
   } catch (err) {
@@ -170,5 +248,5 @@ app.get("/shuffle", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Running on http://127.0.0.1:3000/login");
+  console.log("Running on port", PORT);
 });
