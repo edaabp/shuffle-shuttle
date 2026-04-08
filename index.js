@@ -9,7 +9,7 @@ let accessToken = "";
 const spotifyApi = new SpotifyWebApi({
   clientId: "89a65792e47a494da981def1dec1ea9d",
   clientSecret: "83ba22f498234179b83be6c6f69bac30",
-  redirectUri: "http://127.0.0.1:3000/callback",
+  redirectUri: "https://shuffle-shuttle.onrender.com/callback",
 });
 
 
@@ -388,5 +388,5 @@ Shuffle Another
 });
 
 app.listen(3000, () => {
-  console.log("Running on http://127.0.0.1:3000/login");
+  console.log("Running on https://shuffle-shuttle.onrender.com/login");
 });
