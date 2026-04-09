@@ -112,12 +112,16 @@ app.get("/callback", async (req, res) => {
     accessToken = data.body.access_token;
     spotifyApi.setAccessToken(accessToken);
 
+    // Get user
+    const user = await spotifyApi.getMe();
+    const userId = user.body.id;
+
     let playlists = [];
     let offset = 0;
 
     while(true){
 
-      const response = await spotifyApi.getUserPlaylists({
+      const response = await spotifyApi.getUserPlaylists(userId,{
         limit:50,
         offset:offset
       });
@@ -208,7 +212,7 @@ app.get("/callback", async (req, res) => {
     `);
 
   } catch (err) {
-    console.log(err);
+    console.log("LOGIN ERROR:", err.response?.data || err.message);
     res.send("Login Error");
   }
 });
