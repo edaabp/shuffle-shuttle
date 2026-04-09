@@ -20,7 +20,6 @@ app.get("/", (req, res) => {
   res.send(`
   <!DOCTYPE html>
   <html>
-
   <head>
   <title>Shuffle Shuttle</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,32 +40,20 @@ app.get("/", (req, res) => {
 
   .container{
   text-align:center;
+  max-width:400px;
   width:100%;
-  max-width:420px;
-  }
-
-  h1{
-  font-size:28px;
-  }
-
-  p{
-  color:#aaa;
   }
 
   button{
   width:100%;
   padding:16px;
-  border-radius:30px;
   border:none;
+  border-radius:30px;
   background:#1DB954;
   color:white;
   font-weight:bold;
-  cursor:pointer;
   font-size:16px;
-  }
-
-  button:hover{
-  background:#1ed760;
+  cursor:pointer;
   }
 
   </style>
@@ -79,10 +66,10 @@ app.get("/", (req, res) => {
 
   <h1>🎧 Shuffle Shuttle</h1>
 
-  <p>Shuffle your Spotify playlist instantly</p>
+  <p>Shuffle your Spotify playlists</p>
 
   <a href="/login">
-  <button>Connect Spotify Account</button>
+  <button>Connect Spotify</button>
   </a>
 
   </div>
@@ -114,7 +101,7 @@ app.get("/login", (req, res) => {
 });
 
 
-// CALLBACK
+// CALLBACK → FETCH USER PLAYLISTS
 app.get("/callback", async (req, res) => {
   try {
 
@@ -124,6 +111,36 @@ app.get("/callback", async (req, res) => {
 
     accessToken = data.body.access_token;
     spotifyApi.setAccessToken(accessToken);
+
+    let playlists = [];
+    let offset = 0;
+
+    while(true){
+
+      const response = await spotifyApi.getUserPlaylists({
+        limit:50,
+        offset:offset
+      });
+
+      playlists = playlists.concat(response.body.items);
+
+      if(response.body.items.length < 50) break;
+
+      offset += 50;
+    }
+
+    const playlistHtml = playlists.map(p => `
+      <form action="/shuffle" method="get">
+        <input type="hidden" name="playlistId" value="${p.id}" />
+        <button class="playlist">
+          <img src="${p.images?.[0]?.url || ""}" />
+          <div>
+            <div class="name">${p.name}</div>
+            <div class="count">${p.tracks.total} songs</div>
+          </div>
+        </button>
+      </form>
+    `).join("");
 
     res.send(`
       <!DOCTYPE html>
@@ -138,38 +155,41 @@ app.get("/callback", async (req, res) => {
       background:#121212;
       color:white;
       font-family:Arial;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
       margin:0;
       padding:20px;
       }
 
-      .container{
-      width:100%;
-      max-width:420px;
+      h2{
       text-align:center;
       }
 
-      input{
+      .playlist{
       width:100%;
-      padding:14px;
-      border-radius:12px;
+      display:flex;
+      align-items:center;
+      background:#1e1e1e;
       border:none;
-      font-size:16px;
+      color:white;
+      padding:12px;
+      border-radius:12px;
+      margin-bottom:10px;
+      cursor:pointer;
       }
 
-      button{
-      width:100%;
-      padding:16px;
-      border:none;
-      border-radius:30px;
-      background:#1DB954;
-      color:white;
+      .playlist img{
+      width:60px;
+      height:60px;
+      border-radius:6px;
+      margin-right:15px;
+      }
+
+      .name{
       font-weight:bold;
-      font-size:16px;
-      margin-top:15px;
+      }
+
+      .count{
+      color:#aaa;
+      font-size:14px;
       }
 
       </style>
@@ -178,23 +198,9 @@ app.get("/callback", async (req, res) => {
 
       <body>
 
-      <div class="container">
+      <h2>Select Playlist</h2>
 
-      <h2>Shuffle Playlist 🎧</h2>
-
-      <form action="/shuffle" method="get">
-
-      <input 
-      name="playlist" 
-      placeholder="Paste Spotify Playlist URL"
-      required
-      />
-
-      <button>Shuffle Playlist</button>
-
-      </form>
-
-      </div>
+      ${playlistHtml}
 
       </body>
 
@@ -208,20 +214,14 @@ app.get("/callback", async (req, res) => {
 });
 
 
-// SHUFFLE EXISTING PLAYLIST
+// SHUFFLE (LOGIC UNCHANGED)
 app.get("/shuffle", async (req, res) => {
   try {
 
-    const playlistUrl = req.query.playlist;
-
-    if (!playlistUrl) {
-      return res.send("Please paste playlist URL");
-    }
-
-    const playlistId = playlistUrl.split("/playlist/")[1]?.split("?")[0];
+    const playlistId = req.query.playlistId;
 
     if (!playlistId) {
-      return res.send("Invalid playlist URL");
+      return res.send("Invalid playlist");
     }
 
     let tracks = [];
@@ -275,72 +275,18 @@ app.get("/shuffle", async (req, res) => {
     }
 
     res.send(`
-      <!DOCTYPE html>
       <html>
-
-      <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-      <style>
-
-      body{
-      background:#121212;
-      color:white;
-      font-family:Arial;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-      margin:0;
-      padding:20px;
-      }
-
-      .container{
-      text-align:center;
-      width:100%;
-      max-width:420px;
-      }
-
-      button{
-      width:100%;
-      padding:16px;
-      border:none;
-      border-radius:30px;
-      background:#1DB954;
-      color:white;
-      font-weight:bold;
-      font-size:16px;
-      margin-top:10px;
-      }
-
-      a{
-      text-decoration:none;
-      }
-
-      </style>
-
-      </head>
-
-      <body>
-
-      <div class="container">
-
+      <body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:100px;">
+      
       <h2>🎶 Playlist Shuffled</h2>
 
       <a href="https://open.spotify.com/playlist/${playlistId}" target="_blank">
-      <button>Open Playlist</button>
-      </a>
-
-      <a href="/">
-      <button style="background:#333;margin-top:10px;">
-      Shuffle Another
+      <button style="padding:14px 28px;border:none;border-radius:30px;background:#1DB954;color:white;">
+      Open Playlist
       </button>
       </a>
 
-      </div>
-
       </body>
-
       </html>
     `);
 
