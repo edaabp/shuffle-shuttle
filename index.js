@@ -8,23 +8,24 @@ const app = express();
 
 let accessToken = "";
 
-const spotifyApi = new SpotifyWebApi({
-  clientId: process.env.SPOTIFY_CLIENT_ID,
-  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-  redirectUri: process.env.SPOTIFY_REDIRECT_URI,
-});
+function createSpotify() {
+  return new SpotifyWebApi({
+    clientId: process.env.SPOTIFY_CLIENT_ID,
+    clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+    redirectUri: process.env.SPOTIFY_REDIRECT_URI,
+  });
+}
 
 
-// LANDING PAGE
+// LANDING
 app.get("/", (req, res) => {
   res.send(`
-  <!DOCTYPE html>
   <html>
   <head>
-  <title>Shuffle Shuttle</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
+
   body{
   background:#121212;
   color:white;
@@ -34,25 +35,15 @@ app.get("/", (req, res) => {
   align-items:center;
   height:100vh;
   margin:0;
-  padding:20px;
-  }
-
-  .container{
-  text-align:center;
-  max-width:400px;
-  width:100%;
   }
 
   button{
-  width:100%;
-  padding:16px;
+  padding:16px 30px;
+  background:#1DB954;
   border:none;
   border-radius:30px;
-  background:#1DB954;
   color:white;
-  font-weight:bold;
   font-size:16px;
-  cursor:pointer;
   }
 
   </style>
@@ -61,11 +52,9 @@ app.get("/", (req, res) => {
 
   <body>
 
-  <div class="container">
+  <div>
 
-  <h1>🎧 Shuffle Shuttle</h1>
-
-  <p>Shuffle your Spotify playlists</p>
+  <h1>Shuffle Shuttle</h1>
 
   <a href="/login">
   <button>Connect Spotify</button>
@@ -82,6 +71,8 @@ app.get("/", (req, res) => {
 // LOGIN
 app.get("/login", (req, res) => {
 
+  const spotifyApi = createSpotify();
+
   const scopes = [
     "user-read-private",
     "user-read-email",
@@ -97,21 +88,26 @@ app.get("/login", (req, res) => {
   res.redirect(
     spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
   );
+
 });
 
 
 // CALLBACK
 app.get("/callback", async (req, res) => {
+
   try {
+
+    const spotifyApi = createSpotify();
 
     const code = req.query.code;
 
     const data = await spotifyApi.authorizationCodeGrant(code);
 
     accessToken = data.body.access_token;
+
     spotifyApi.setAccessToken(accessToken);
 
-    // Get user's playlists
+    // GET PLAYLISTS
     let playlists = [];
     let offset = 0;
 
@@ -143,8 +139,9 @@ app.get("/callback", async (req, res) => {
     `).join("");
 
     res.send(`
-    <!DOCTYPE html>
+
     <html>
+
     <head>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -155,12 +152,7 @@ app.get("/callback", async (req, res) => {
     background:#121212;
     color:white;
     font-family:Arial;
-    margin:0;
     padding:20px;
-    }
-
-    h2{
-    text-align:center;
     }
 
     .playlist{
@@ -173,23 +165,13 @@ app.get("/callback", async (req, res) => {
     padding:12px;
     border-radius:12px;
     margin-bottom:10px;
-    cursor:pointer;
     }
 
-    .playlist img{
+    img{
     width:60px;
     height:60px;
     border-radius:6px;
-    margin-right:15px;
-    }
-
-    .name{
-    font-weight:bold;
-    }
-
-    .count{
-    color:#aaa;
-    font-size:14px;
+    margin-right:10px;
     }
 
     </style>
@@ -205,17 +187,23 @@ app.get("/callback", async (req, res) => {
     </body>
 
     </html>
+
     `);
 
   } catch (err) {
+
     console.log("LOGIN ERROR:", err.response?.data || err.message);
+
     res.send("Login Error");
+
   }
+
 });
 
 
-// SHUFFLE (UNCHANGED LOGIC)
+// SHUFFLE
 app.get("/shuffle", async (req, res) => {
+
   try {
 
     const playlistId = req.query.playlistId;
@@ -249,8 +237,7 @@ app.get("/shuffle", async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${accessToken}`
         }
       }
     );
@@ -263,33 +250,40 @@ app.get("/shuffle", async (req, res) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
+            Authorization: `Bearer ${accessToken}`
           }
         }
       );
     }
 
     res.send(`
-      <html>
-      <body style="background:#121212;color:white;font-family:Arial;text-align:center;padding-top:100px;">
-      
-      <h2>🎶 Playlist Shuffled</h2>
 
-      <a href="https://open.spotify.com/playlist/${playlistId}" target="_blank">
-      <button style="padding:14px 28px;border:none;border-radius:30px;background:#1DB954;color:white;">
-      Open Playlist
-      </button>
-      </a>
+    <html>
 
-      </body>
-      </html>
+    <body style="background:#121212;color:white;text-align:center;padding-top:100px;">
+
+    <h2>Playlist Shuffled</h2>
+
+    <a href="https://open.spotify.com/playlist/${playlistId}">
+    <button style="padding:14px 28px;border-radius:30px;background:#1DB954;color:white;border:none;">
+    Open Playlist
+    </button>
+    </a>
+
+    </body>
+
+    </html>
+
     `);
 
   } catch (err) {
-    console.log("FAILED:", err.response?.data || err.message);
-    res.send("Error — check console");
+
+    console.log("SHUFFLE ERROR:", err.response?.data || err.message);
+
+    res.send("Error shuffling");
+
   }
+
 });
 
 
