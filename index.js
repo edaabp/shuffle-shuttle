@@ -127,8 +127,8 @@ app.get("/callback", async (req, res) => {
         <button class="playlist">
           <img src="${p.images?.[0]?.url || ""}" />
           <div>
-            <div class="name">${p.name}</div>
-            <div class="count">${p.tracks.total} songs</div>
+            <div class="name">${p.name || "Untitled Playlist"}</div>
+            <div class="count">${p.tracks?.total || 0} songs</div>
           </div>
         </button>
       </form>
@@ -165,6 +165,7 @@ app.get("/callback", async (req, res) => {
     padding:12px;
     border-radius:12px;
     margin-bottom:10px;
+    cursor:pointer;
     }
 
     img{
