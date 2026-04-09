@@ -25,7 +25,6 @@ app.get("/", (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-
   body{
   background:#121212;
   color:white;
@@ -101,7 +100,7 @@ app.get("/login", (req, res) => {
 });
 
 
-// CALLBACK → FETCH USER PLAYLISTS
+// CALLBACK
 app.get("/callback", async (req, res) => {
   try {
 
@@ -112,16 +111,13 @@ app.get("/callback", async (req, res) => {
     accessToken = data.body.access_token;
     spotifyApi.setAccessToken(accessToken);
 
-    // Get user
-    const user = await spotifyApi.getMe();
-    const userId = user.body.id;
-
+    // Get user's playlists
     let playlists = [];
     let offset = 0;
 
     while(true){
 
-      const response = await spotifyApi.getUserPlaylists(userId,{
+      const response = await spotifyApi.getUserPlaylists({
         limit:50,
         offset:offset
       });
@@ -147,68 +143,68 @@ app.get("/callback", async (req, res) => {
     `).join("");
 
     res.send(`
-      <!DOCTYPE html>
-      <html>
+    <!DOCTYPE html>
+    <html>
+    <head>
 
-      <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-      <style>
+    <style>
 
-      body{
-      background:#121212;
-      color:white;
-      font-family:Arial;
-      margin:0;
-      padding:20px;
-      }
+    body{
+    background:#121212;
+    color:white;
+    font-family:Arial;
+    margin:0;
+    padding:20px;
+    }
 
-      h2{
-      text-align:center;
-      }
+    h2{
+    text-align:center;
+    }
 
-      .playlist{
-      width:100%;
-      display:flex;
-      align-items:center;
-      background:#1e1e1e;
-      border:none;
-      color:white;
-      padding:12px;
-      border-radius:12px;
-      margin-bottom:10px;
-      cursor:pointer;
-      }
+    .playlist{
+    width:100%;
+    display:flex;
+    align-items:center;
+    background:#1e1e1e;
+    border:none;
+    color:white;
+    padding:12px;
+    border-radius:12px;
+    margin-bottom:10px;
+    cursor:pointer;
+    }
 
-      .playlist img{
-      width:60px;
-      height:60px;
-      border-radius:6px;
-      margin-right:15px;
-      }
+    .playlist img{
+    width:60px;
+    height:60px;
+    border-radius:6px;
+    margin-right:15px;
+    }
 
-      .name{
-      font-weight:bold;
-      }
+    .name{
+    font-weight:bold;
+    }
 
-      .count{
-      color:#aaa;
-      font-size:14px;
-      }
+    .count{
+    color:#aaa;
+    font-size:14px;
+    }
 
-      </style>
+    </style>
 
-      </head>
+    </head>
 
-      <body>
+    <body>
 
-      <h2>Select Playlist</h2>
+    <h2>Select Playlist</h2>
 
-      ${playlistHtml}
+    ${playlistHtml}
 
-      </body>
+    </body>
 
-      </html>
+    </html>
     `);
 
   } catch (err) {
@@ -218,15 +214,11 @@ app.get("/callback", async (req, res) => {
 });
 
 
-// SHUFFLE (LOGIC UNCHANGED)
+// SHUFFLE (UNCHANGED LOGIC)
 app.get("/shuffle", async (req, res) => {
   try {
 
     const playlistId = req.query.playlistId;
-
-    if (!playlistId) {
-      return res.send("Invalid playlist");
-    }
 
     let tracks = [];
     let url = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50`;
