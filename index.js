@@ -10,7 +10,7 @@ function createSpotify() {
   return new SpotifyWebApi({
     clientId: process.env.SPOTIFY_CLIENT_ID,
     clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    redirectUri: process.env.SPOTIFY_REDIRECT_URI,
+    redirectUri: process.env.SPOTIFY_REDIRECT_URI
   });
 }
 
@@ -21,6 +21,7 @@ app.get("/", (req, res) => {
   <html>
   <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
   body{
   background:#121212;
@@ -32,23 +33,32 @@ app.get("/", (req, res) => {
   height:100vh;
   margin:0;
   }
+
   button{
-  padding:16px 30px;
-  background:#1DB954;
+  padding:16px 28px;
   border:none;
   border-radius:30px;
+  background:#1DB954;
   color:white;
   font-size:16px;
   }
+
   </style>
+
   </head>
+
   <body>
+
   <div>
+
   <h1>Shuffle Shuttle</h1>
+
   <a href="/login">
   <button>Connect Spotify</button>
   </a>
+
   </div>
+
   </body>
   </html>
   `);
@@ -69,10 +79,12 @@ app.get("/login", (req, res) => {
     "playlist-modify-public"
   ];
 
-  res.redirect(
-    spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
+  const authorizeURL = spotifyApi.createAuthorizeURL(
+    scopes,
+    "shuffle-shuttle"
   );
 
+  res.redirect(authorizeURL);
 });
 
 
@@ -123,16 +135,24 @@ app.get("/callback", async (req, res) => {
     `).join("");
 
     res.send(`
+
     <html>
+
     <head>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
+
     body{
     background:#121212;
     color:white;
     font-family:Arial;
     padding:20px;
+    }
+
+    h2{
+    text-align:center;
     }
 
     .playlist{
@@ -151,8 +171,18 @@ app.get("/callback", async (req, res) => {
     width:60px;
     height:60px;
     border-radius:6px;
-    margin-right:10px;
+    margin-right:12px;
     }
+
+    .name{
+    font-weight:bold;
+    }
+
+    .count{
+    font-size:14px;
+    color:#aaa;
+    }
+
     </style>
 
     </head>
@@ -166,13 +196,17 @@ app.get("/callback", async (req, res) => {
     </body>
 
     </html>
+
     `);
 
   } catch (err) {
 
     console.log("LOGIN ERROR:", err.response?.data || err.message);
 
-    res.send("Login Error");
+    res.send(`
+    <h2>Login Error</h2>
+    <pre>${JSON.stringify(err.response?.data || err.message, null, 2)}</pre>
+    `);
 
   }
 
@@ -191,6 +225,7 @@ app.get("/shuffle", async (req, res) => {
     let url = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50`;
 
     while (url) {
+
       const response = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`
@@ -198,6 +233,7 @@ app.get("/shuffle", async (req, res) => {
       });
 
       tracks = tracks.concat(response.data.items);
+
       url = response.data.next;
     }
 
@@ -211,9 +247,7 @@ app.get("/shuffle", async (req, res) => {
 
     await axios.put(
       `https://api.spotify.com/v1/playlists/${playlistId}/items`,
-      {
-        uris: uris.slice(0, 100)
-      },
+      { uris: uris.slice(0,100) },
       {
         headers: {
           Authorization: `Bearer ${accessToken}`
@@ -222,37 +256,47 @@ app.get("/shuffle", async (req, res) => {
     );
 
     for (let i = 100; i < uris.length; i += 100) {
+
       await axios.post(
         `https://api.spotify.com/v1/playlists/${playlistId}/items`,
-        {
-          uris: uris.slice(i, i + 100)
-        },
+        { uris: uris.slice(i, i + 100) },
         {
           headers: {
             Authorization: `Bearer ${accessToken}`
           }
         }
       );
+
     }
 
     res.send(`
+
     <html>
+
     <body style="background:#121212;color:white;text-align:center;padding-top:100px;">
-    <h2>Playlist Shuffled</h2>
+
+    <h2>Playlist Shuffled 🎵</h2>
+
     <a href="https://open.spotify.com/playlist/${playlistId}">
     <button style="padding:14px 28px;border-radius:30px;background:#1DB954;color:white;border:none;">
     Open Playlist
     </button>
     </a>
+
     </body>
+
     </html>
+
     `);
 
   } catch (err) {
 
     console.log("SHUFFLE ERROR:", err.response?.data || err.message);
 
-    res.send("Error shuffling");
+    res.send(`
+    <h2>Error Shuffling</h2>
+    <pre>${JSON.stringify(err.response?.data || err.message, null, 2)}</pre>
+    `);
 
   }
 
