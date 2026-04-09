@@ -23,6 +23,7 @@ app.get("/", (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
+
   body{
   background:#121212;
   color:white;
@@ -34,6 +35,12 @@ app.get("/", (req, res) => {
   margin:0;
   }
 
+  .container{
+  text-align:center;
+  max-width:400px;
+  width:100%;
+  }
+
   button{
   padding:16px 28px;
   border:none;
@@ -41,6 +48,7 @@ app.get("/", (req, res) => {
   background:#1DB954;
   color:white;
   font-size:16px;
+  width:100%;
   }
 
   </style>
@@ -49,7 +57,7 @@ app.get("/", (req, res) => {
 
   <body>
 
-  <div>
+  <div class="container">
 
   <h1>Shuffle Shuttle</h1>
 
@@ -88,20 +96,28 @@ app.get("/login", (req, res) => {
 });
 
 
-// Callback
+// Callback (Playlists)
 app.get("/callback", async (req, res) => {
 
   try {
 
     const spotifyApi = createSpotify();
 
-    const code = req.query.code;
+    let accessToken;
+    let code = req.query.code;
 
-    const data = await spotifyApi.authorizationCodeGrant(code);
-
-    const accessToken = data.body.access_token;
+    if(code){
+      const data = await spotifyApi.authorizationCodeGrant(code);
+      accessToken = data.body.access_token;
+    } else {
+      accessToken = req.query.token;
+    }
 
     spotifyApi.setAccessToken(accessToken);
+
+    // get user
+    const me = await spotifyApi.getMe();
+    const userId = me.body.id;
 
     let playlists = [];
     let offset = 0;
@@ -119,6 +135,11 @@ app.get("/callback", async (req, res) => {
 
       offset += 50;
     }
+
+    // filter playlists
+    playlists = playlists.filter(p =>
+      p.owner?.id === userId || p.collaborative
+    );
 
     const playlistHtml = playlists.map(p => `
       <form action="/shuffle" method="get">
@@ -148,6 +169,14 @@ app.get("/callback", async (req, res) => {
     background:#121212;
     color:white;
     font-family:Arial;
+    display:flex;
+    justify-content:center;
+    margin:0;
+    }
+
+    .container{
+    width:100%;
+    max-width:500px;
     padding:20px;
     }
 
@@ -166,6 +195,7 @@ app.get("/callback", async (req, res) => {
     border-radius:12px;
     margin-bottom:10px;
     cursor:pointer;
+    text-align:left;
     }
 
     img{
@@ -190,9 +220,13 @@ app.get("/callback", async (req, res) => {
 
     <body>
 
+    <div class="container">
+
     <h2>Select Playlist</h2>
 
     ${playlistHtml}
+
+    </div>
 
     </body>
 
@@ -204,10 +238,7 @@ app.get("/callback", async (req, res) => {
 
     console.log("LOGIN ERROR:", err.response?.data || err.message);
 
-    res.send(`
-    <h2>Login Error</h2>
-    <pre>${JSON.stringify(err.response?.data || err.message, null, 2)}</pre>
-    `);
+    res.send("Login Error");
 
   }
 
@@ -234,7 +265,6 @@ app.get("/shuffle", async (req, res) => {
       });
 
       tracks = tracks.concat(response.data.items);
-
       url = response.data.next;
     }
 
@@ -274,15 +304,58 @@ app.get("/shuffle", async (req, res) => {
 
     <html>
 
-    <body style="background:#121212;color:white;text-align:center;padding-top:100px;">
+    <head>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+
+    body{
+    background:#121212;
+    color:white;
+    font-family:Arial;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    margin:0;
+    }
+
+    .container{
+    text-align:center;
+    max-width:400px;
+    width:100%;
+    }
+
+    button{
+    width:100%;
+    padding:14px;
+    border-radius:30px;
+    border:none;
+    background:#1DB954;
+    color:white;
+    margin-top:10px;
+    }
+
+    </style>
+
+    </head>
+
+    <body>
+
+    <div class="container">
 
     <h2>Playlist Shuffled 🎵</h2>
 
     <a href="https://open.spotify.com/playlist/${playlistId}">
-    <button style="padding:14px 28px;border-radius:30px;background:#1DB954;color:white;border:none;">
-    Open Playlist
-    </button>
+    <button>Open Playlist</button>
     </a>
+
+    <a href="/callback?token=${accessToken}">
+    <button style="background:#333;">Back to Playlists</button>
+    </a>
+
+    </div>
 
     </body>
 
@@ -294,10 +367,7 @@ app.get("/shuffle", async (req, res) => {
 
     console.log("SHUFFLE ERROR:", err.response?.data || err.message);
 
-    res.send(`
-    <h2>Error Shuffling</h2>
-    <pre>${JSON.stringify(err.response?.data || err.message, null, 2)}</pre>
-    `);
+    res.send("Error Shuffling");
 
   }
 
