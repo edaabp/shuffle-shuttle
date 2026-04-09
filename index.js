@@ -3,10 +3,15 @@ require("dotenv").config();
 const express = require("express");
 const SpotifyWebApi = require("spotify-web-api-node");
 const axios = require("axios");
+const session = require("express-session");
 
 const app = express();
 
-let accessToken = "";
+app.use(session({
+  secret: "shuffle-shuttle-secret",
+  resave: false,
+  saveUninitialized: false
+}));
 
 function createSpotify() {
   return new SpotifyWebApi({
@@ -17,7 +22,7 @@ function createSpotify() {
 }
 
 
-// LANDING
+// Landing Page
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -25,7 +30,6 @@ app.get("/", (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-
   body{
   background:#121212;
   color:white;
@@ -68,7 +72,7 @@ app.get("/", (req, res) => {
 });
 
 
-// LOGIN
+// Login
 app.get("/login", (req, res) => {
 
   const spotifyApi = createSpotify();
@@ -78,9 +82,6 @@ app.get("/login", (req, res) => {
     "user-read-email",
     "playlist-read-private",
     "playlist-read-collaborative",
-    "user-read-playback-state",
-    "user-read-currently-playing",
-    "user-modify-playback-state",
     "playlist-modify-private",
     "playlist-modify-public"
   ];
@@ -88,11 +89,10 @@ app.get("/login", (req, res) => {
   res.redirect(
     spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
   );
-
 });
 
 
-// CALLBACK
+// Callback
 app.get("/callback", async (req, res) => {
 
   try {
@@ -103,11 +103,10 @@ app.get("/callback", async (req, res) => {
 
     const data = await spotifyApi.authorizationCodeGrant(code);
 
-    accessToken = data.body.access_token;
+    req.session.accessToken = data.body.access_token;
 
-    spotifyApi.setAccessToken(accessToken);
+    spotifyApi.setAccessToken(req.session.accessToken);
 
-    // GET PLAYLISTS
     let playlists = [];
     let offset = 0;
 
@@ -201,10 +200,12 @@ app.get("/callback", async (req, res) => {
 });
 
 
-// SHUFFLE
+// Shuffle
 app.get("/shuffle", async (req, res) => {
 
   try {
+
+    const accessToken = req.session.accessToken;
 
     const playlistId = req.query.playlistId;
 
