@@ -3,15 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const SpotifyWebApi = require("spotify-web-api-node");
 const axios = require("axios");
-const session = require("express-session");
 
 const app = express();
-
-app.use(session({
-  secret: "shuffle-shuttle-secret",
-  resave: false,
-  saveUninitialized: false
-}));
 
 function createSpotify() {
   return new SpotifyWebApi({
@@ -28,7 +21,6 @@ app.get("/", (req, res) => {
   <html>
   <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <style>
   body{
   background:#121212;
@@ -40,7 +32,6 @@ app.get("/", (req, res) => {
   height:100vh;
   margin:0;
   }
-
   button{
   padding:16px 30px;
   background:#1DB954;
@@ -49,23 +40,15 @@ app.get("/", (req, res) => {
   color:white;
   font-size:16px;
   }
-
   </style>
-
   </head>
-
   <body>
-
   <div>
-
   <h1>Shuffle Shuttle</h1>
-
   <a href="/login">
   <button>Connect Spotify</button>
   </a>
-
   </div>
-
   </body>
   </html>
   `);
@@ -89,6 +72,7 @@ app.get("/login", (req, res) => {
   res.redirect(
     spotifyApi.createAuthorizeURL(scopes, "shuffle-shuttle", true)
   );
+
 });
 
 
@@ -103,9 +87,9 @@ app.get("/callback", async (req, res) => {
 
     const data = await spotifyApi.authorizationCodeGrant(code);
 
-    req.session.accessToken = data.body.access_token;
+    const accessToken = data.body.access_token;
 
-    spotifyApi.setAccessToken(req.session.accessToken);
+    spotifyApi.setAccessToken(accessToken);
 
     let playlists = [];
     let offset = 0;
@@ -127,6 +111,7 @@ app.get("/callback", async (req, res) => {
     const playlistHtml = playlists.map(p => `
       <form action="/shuffle" method="get">
         <input type="hidden" name="playlistId" value="${p.id}" />
+        <input type="hidden" name="token" value="${accessToken}" />
         <button class="playlist">
           <img src="${p.images?.[0]?.url || ""}" />
           <div>
@@ -138,15 +123,11 @@ app.get("/callback", async (req, res) => {
     `).join("");
 
     res.send(`
-
     <html>
-
     <head>
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
-
     body{
     background:#121212;
     color:white;
@@ -172,7 +153,6 @@ app.get("/callback", async (req, res) => {
     border-radius:6px;
     margin-right:10px;
     }
-
     </style>
 
     </head>
@@ -186,7 +166,6 @@ app.get("/callback", async (req, res) => {
     </body>
 
     </html>
-
     `);
 
   } catch (err) {
@@ -205,9 +184,8 @@ app.get("/shuffle", async (req, res) => {
 
   try {
 
-    const accessToken = req.session.accessToken;
-
     const playlistId = req.query.playlistId;
+    const accessToken = req.query.token;
 
     let tracks = [];
     let url = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50`;
@@ -258,23 +236,16 @@ app.get("/shuffle", async (req, res) => {
     }
 
     res.send(`
-
     <html>
-
     <body style="background:#121212;color:white;text-align:center;padding-top:100px;">
-
     <h2>Playlist Shuffled</h2>
-
     <a href="https://open.spotify.com/playlist/${playlistId}">
     <button style="padding:14px 28px;border-radius:30px;background:#1DB954;color:white;border:none;">
     Open Playlist
     </button>
     </a>
-
     </body>
-
     </html>
-
     `);
 
   } catch (err) {
