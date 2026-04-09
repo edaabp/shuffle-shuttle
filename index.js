@@ -17,59 +17,91 @@ function createSpotify() {
 
 // Landing Page
 app.get("/", (req, res) => {
-  res.send(`
-  <html>
-  <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
+res.send(`
 
-  body{
-  background:#121212;
-  color:white;
-  font-family:Arial;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  margin:0;
-  }
+<html>
 
-  .container{
-  text-align:center;
-  max-width:400px;
-  width:100%;
-  }
+<head>
 
-  button{
-  padding:16px 28px;
-  border:none;
-  border-radius:30px;
-  background:#1DB954;
-  color:white;
-  font-size:16px;
-  width:100%;
-  }
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  </style>
+<style>
 
-  </head>
+body{
+background:#121212;
+color:white;
+font-family:Arial;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
 
-  <body>
+.container{
+text-align:center;
+max-width:400px;
+width:100%;
+padding:20px;
+}
 
-  <div class="container">
+button{
+padding:16px 28px;
+border:none;
+border-radius:30px;
+background:#1DB954;
+color:white;
+font-size:16px;
+width:100%;
+cursor:pointer;
+}
 
-  <h1>Shuffle Shuttle</h1>
+.warning{
+margin-bottom:20px;
+color:#aaa;
+}
 
-  <a href="/login">
-  <button>Connect Spotify</button>
-  </a>
+</style>
 
-  </div>
+</head>
 
-  </body>
-  </html>
-  `);
+<body>
+
+<div class="container">
+
+<h1>Shuffle Shuttle</h1>
+
+<p class="warning" id="warning"></p>
+
+<a href="/login">
+<button>Connect Spotify</button>
+</a>
+
+</div>
+
+<script>
+
+const ua = navigator.userAgent;
+
+if(
+ua.includes("FBAN") ||
+ua.includes("FBAV") ||
+ua.includes("Instagram") ||
+ua.includes("Messenger")
+){
+document.getElementById("warning").innerText =
+"Open in browser for login to work";
+}
+
+</script>
+
+</body>
+
+</html>
+
+`);
+
 });
 
 
@@ -96,7 +128,7 @@ app.get("/login", (req, res) => {
 });
 
 
-// Callback (Playlists)
+// Callback
 app.get("/callback", async (req, res) => {
 
   try {
@@ -115,7 +147,6 @@ app.get("/callback", async (req, res) => {
 
     spotifyApi.setAccessToken(accessToken);
 
-    // get user
     const me = await spotifyApi.getMe();
     const userId = me.body.id;
 
@@ -136,20 +167,37 @@ app.get("/callback", async (req, res) => {
       offset += 50;
     }
 
-    // filter playlists
     playlists = playlists.filter(p =>
       p.owner?.id === userId || p.collaborative
     );
 
-    const playlistHtml = playlists.map(p => `
+    // get real track counts
+    const playlistsWithCounts = await Promise.all(
+      playlists.map(async (p) => {
+        try {
+          const full = await spotifyApi.getPlaylist(p.id);
+          return {
+            ...p,
+            total: full.body.tracks.total
+          };
+        } catch {
+          return {
+            ...p,
+            total: 0
+          };
+        }
+      })
+    );
+
+    const playlistHtml = playlistsWithCounts.map(p => `
       <form action="/shuffle" method="get">
         <input type="hidden" name="playlistId" value="${p.id}" />
         <input type="hidden" name="token" value="${accessToken}" />
         <button class="playlist">
           <img src="${p.images?.[0]?.url || ""}" />
           <div>
-            <div class="name">${p.name || "Untitled Playlist"}</div>
-            <div class="count">${p.tracks?.total || 0} songs</div>
+            <div class="name">${p.name}</div>
+            <div class="count">${p.total} songs</div>
           </div>
         </button>
       </form>
@@ -335,6 +383,7 @@ app.get("/shuffle", async (req, res) => {
     background:#1DB954;
     color:white;
     margin-top:10px;
+    cursor:pointer;
     }
 
     </style>
