@@ -18,7 +18,7 @@ function createSpotify() {
 // Landing Page
 app.get("/", (req, res) => {
 
-res.send(`
+  res.send(`
 
 <html>
 
@@ -138,7 +138,7 @@ app.get("/callback", async (req, res) => {
     let accessToken;
     let code = req.query.code;
 
-    if(code){
+    if (code) {
       const data = await spotifyApi.authorizationCodeGrant(code);
       accessToken = data.body.access_token;
     } else {
@@ -153,16 +153,16 @@ app.get("/callback", async (req, res) => {
     let playlists = [];
     let offset = 0;
 
-    while(true){
+    while (true) {
 
       const response = await spotifyApi.getUserPlaylists({
-        limit:50,
-        offset:offset
+        limit: 50,
+        offset: offset
       });
 
       playlists = playlists.concat(response.body.items);
 
-      if(response.body.items.length < 50) break;
+      if (response.body.items.length < 50) break;
 
       offset += 50;
     }
@@ -172,22 +172,10 @@ app.get("/callback", async (req, res) => {
     );
 
     // get real track counts
-    const playlistsWithCounts = await Promise.all(
-      playlists.map(async (p) => {
-        try {
-          const full = await spotifyApi.getPlaylist(p.id);
-          return {
-            ...p,
-            total: full.body.tracks.total
-          };
-        } catch {
-          return {
-            ...p,
-            total: 0
-          };
-        }
-      })
-    );
+    const playlistsWithCounts = playlists.map(p => ({
+      ...p,
+      total: p.tracks?.total || 0
+    }));
 
     const playlistHtml = playlistsWithCounts.map(p => `
       <form action="/shuffle" method="get">
@@ -326,7 +314,7 @@ app.get("/shuffle", async (req, res) => {
 
     await axios.put(
       `https://api.spotify.com/v1/playlists/${playlistId}/items`,
-      { uris: uris.slice(0,100) },
+      { uris: uris.slice(0, 100) },
       {
         headers: {
           Authorization: `Bearer ${accessToken}`
